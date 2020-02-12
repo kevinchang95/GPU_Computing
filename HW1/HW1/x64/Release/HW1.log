@@ -1,0 +1,4 @@
+﻿  main.cu
+main.obj : error LNK2001: unresolved external symbol cudaGetDeviceCount
+main.obj : error LNK2001: unresolved external symbol cudaGetDeviceProperties
+G:\Jiajun\InUH\Courses\2020Spring\6397\HW1\HW1\x64\Release\HW1.exe : fatal error LNK1120: 2 unresolved externals
