@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 using namespace std;
 
 
@@ -24,7 +25,8 @@ int main(int argc, char* argv[])
     }
     //string filename = argv[1];                   //the 2nd argument is the figure to be processed
     string filename(argv[1]);
-    string fileline;
+    string version;
+    string comment;
     char c;
     //char * c = (char * )malloc(sizeof(char) * 1);
     int sigma = atoi(argv[2]);                  //the 3rd argument is the sigma value for filter
@@ -32,47 +34,49 @@ int main(int argc, char* argv[])
     cout << "The filename for the figure is " << filename << endl;
     cout << "The sigma value for the filter is " << sigma << endl << endl;
 
-    //fstream figure(filename , ifstream::binary);
+   
     fstream figure(filename , ifstream::in|ifstream::binary);
 
-    //figure.seekg(0, figure.end);
-    //int length = figure.tellg();
-    //figure.seekg(0, figure.beg);
+    getline(figure, version);
+    if (version == "P6") {
+        
+        cout << "Version correct!\n";
+    }
+    else {
+        cout << "Version wrong! Exiting...\n";
+        return 1;
+    }
 
-    // allocate memory:
-    int length = 1024;
-    char *buffer = (char *)malloc(sizeof(char) *1025) ;
+    do {
+        getline(figure, comment);
+            
+    } while (comment[0] == '#');
+
+    //cout << comment <<endl;
+
+    // read figure width and length
+    int width = 0;
+    int length = 0;
+    const char* size_string = comment.c_str();                             //Convert string to const char, which sccanf signature needed
+    sscanf(size_string, "%d %d", &width, &length);                         //read integer pattern from the string
+    cout << "The width of the figure is " << width << ", and the length is " << length << endl;
+    string intensity ;
+    getline(figure, intensity);
+    cout << "The intensity of the figure is " << intensity << endl;
+
+    int size = width * length * 3;
+    char *RGB = (char *)malloc(sizeof(char) * size) ;
 
     // read data as a block:
-    figure.read(buffer, length);
+    figure.read(RGB, size);
 
-    
-    //figure >> buffer;
-    cout <<  buffer << endl;
+    cout <<  RGB << endl;
 
     figure.close();
 
+    matrix_read(RGB, size);
 
-
-  //  while (Figure.get(c)) {
-    //getline(Figure, filename);
-    //for(int i = 0 ; i < filename.size(); i++){
-    //    //Figure.get(c,1024);
-      //  cout << c ;
-    //    cout << filename[i];
-    //    //cout << i << ":" << c << endl;
-    //    //break;
-    //}
-
-    /*while (getline(Figure, fileline)) {
-
-        cout << fileline << '\t' << "The length is: "<< fileline.length() << endl;
-
-    }
-
-    Figure.close();*/
-
-
+ 
 
 
 
@@ -80,7 +84,24 @@ int main(int argc, char* argv[])
 }
 
 
+int* matrix_read(char* RGB, int width, int length) {
+    int i = 0;
 
+    int R[width][length], G, B;
+    while (i < 12) {
+        rem = remainder(i, 3);
+        switch (rem) {
+        case 0:
+            &R = 
+        }
+        
+
+
+    }
+
+
+
+}
 
 
 
@@ -193,3 +214,22 @@ int main(int argc, char* argv[])
 //    fprintf(stderr, "cudaDeviceReset failed!");
 //    return 1;
 //}
+
+
+ //  while (Figure.get(c)) {
+    //getline(Figure, filename);
+    //for(int i = 0 ; i < filename.size(); i++){
+    //    //Figure.get(c,1024);
+      //  cout << c ;
+    //    cout << filename[i];
+    //    //cout << i << ":" << c << endl;
+    //    //break;
+    //}
+
+    /*while (getline(Figure, fileline)) {
+
+        cout << fileline << '\t' << "The length is: "<< fileline.length() << endl;
+
+    }
+
+    Figure.close();*/
