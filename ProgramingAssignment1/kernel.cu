@@ -17,6 +17,9 @@ __global__ void addKernel(int *c, const int *a, const int *b)
     c[i] = a[i] + b[i];
 }
 
+int* matrix_read(char* RGB, int size, char color);
+
+
 int main(int argc, char* argv[])
 {
     if (argc != 3) {
@@ -64,42 +67,61 @@ int main(int argc, char* argv[])
     getline(figure, intensity);
     cout << "The intensity of the figure is " << intensity << endl;
 
-    int size = width * length * 3;
-    char *RGB = (char *)malloc(sizeof(char) * size) ;
+    int size_mat = width * length * 3;
+    char *RGB = (char *)malloc(sizeof(char) * size_mat) ;
 
     // read data as a block:
-    figure.read(RGB, size);
+    figure.read(RGB, size_mat);
 
-    cout <<  RGB << endl;
+    //cout <<  RGB << endl;
 
     figure.close();
 
-    matrix_read(RGB, size);
+    int* R;
+    int* G;
+    int* B;
 
+    R = matrix_read(RGB,size_mat,'R');
+    //G = matrix_read(RGB, size_mat, 'G');
+    //B = matrix_read(RGB, size_mat, 'B');
  
-
-
+    for (int i = 0; i < 10; i++)
+    cout << R[i] << " ";
+    
 
     return 0;
 }
 
 
-int* matrix_read(char* RGB, int width, int length) {
-    int i = 0;
-
-    int R[width][length], G, B;
-    while (i < 12) {
-        rem = remainder(i, 3);
-        switch (rem) {
-        case 0:
-            &R = 
-        }
+int* matrix_read(char* RGB, int size, char color) {
+    
+    int* monochrome = (int*)malloc(size * sizeof(int));
+    //int size_RGB = size / 3;
+    int size_RGB = 10;
+    int i;
+    switch (color)
+    {
+    case 'R':
+        i = 0;
+        break;
+    case 'G':
+        i = 1;
+        break;
+    case 'B':
+        i = 2;
+        break;
+    }
+    int inc = 3;
+    int j = 0;
+    for (i ; i < size_RGB ; i+=inc ) {
         
-
+        *(monochrome + j) = int(RGB[i]);
+        j += 1;
+        
 
     }
 
-
+    return monochrome;
 
 }
 
