@@ -17,7 +17,7 @@ __global__ void addKernel(int *c, const int *a, const int *b)
     c[i] = a[i] + b[i];
 }
 
-int* matrix_read(char* RGB, int size, char color);
+unsigned char* matrix_read(char* RGB, int size, char color);
 
 
 int main(int argc, char* argv[])
@@ -77,27 +77,27 @@ int main(int argc, char* argv[])
 
     figure.close();
 
-    int* R;
-    int* G;
-    int* B;
+    unsigned char* R;
+    unsigned char* G;
+    unsigned char* B;
 
     R = matrix_read(RGB,size_mat,'R');
-    //G = matrix_read(RGB, size_mat, 'G');
-    //B = matrix_read(RGB, size_mat, 'B');
+    G = matrix_read(RGB, size_mat, 'G');
+    B = matrix_read(RGB, size_mat, 'B');
  
     for (int i = 0; i < 10; i++)
-    cout << R[i] << " ";
+    cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";
     
 
     return 0;
 }
 
 
-int* matrix_read(char* RGB, int size, char color) {
+unsigned char* matrix_read(char* RGB, int size, char color) {
     
-    int* monochrome = (int*)malloc(size * sizeof(int));
-    //int size_RGB = size / 3;
-    int size_RGB = 10;
+    unsigned char* monochrome = (unsigned char*)malloc(size * sizeof(char));
+    int size_RGB = size / 3;
+    //int size_RGB = 30;
     int i;
     switch (color)
     {
@@ -115,7 +115,7 @@ int* matrix_read(char* RGB, int size, char color) {
     int j = 0;
     for (i ; i < size_RGB ; i+=inc ) {
         
-        *(monochrome + j) = int(RGB[i]);
+        *(monochrome + j) = unsigned char(RGB[i]);
         j += 1;
         
 
