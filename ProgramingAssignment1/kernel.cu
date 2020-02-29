@@ -39,11 +39,22 @@ int main(int argc, char* argv[])
 
    
     fstream figure(filename , ifstream::in|ifstream::binary);
+    
+    cout << "Reading file...\n";
+
+    if (!(figure.is_open())) {
+
+        cout << "File open failed!!!" << endl;
+    }
+    else {
+        cout << "File open success!!" << endl;
+    }
+
 
     getline(figure, version);
     if (version == "P6") {
         
-        cout << "Version correct!\n";
+        cout << "Version correct! Version is " << version <<"\n";
     }
     else {
         cout << "Version wrong! Exiting...\n";
