@@ -22,8 +22,8 @@ __global__ void addKernel(int *c, const int *a, const int *b)
 
 ////////////////Function Declarations/////////////
 unsigned char* matrix_read(char* RGB, int size, char color);
-float* Gaussian_kernel(int sigma);
-
+float* Gaussian_kernel(int sigma , int* kernel_size);
+unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width, int length);
 
 /////////////////////////////////////////////////
 
@@ -106,17 +106,23 @@ int main(int argc, char* argv[])
     /*for (int i = 0; i < 10; i++)
     cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";*/
     
-    float* k ;                                                          //The Gaussian Kernel
-    k = Gaussian_kernel(sigma);
+    float* k ;       
+    int kernel_size;
+    k = Gaussian_kernel(sigma,&kernel_size);                                         //The Gaussian Kernel
+    //cout << "The size of the kernel is " << kernel_size << endl;
 
     /*for (int i = 0; i < 100; i++) {
 
         cout << k[i] << " ";
     }*/
 
+    unsigned char* R_fil;
+    unsigned char* G_fil;
+    unsigned char* B_fil;
 
-
-
+    R_fil = convolve(R, k, kernel_size,width,length);
+    G_fil = convolve(G, k, kernel_size,width,length);
+    B_fil = convolve(B, k, kernel_size,width,length);
 
 
 
@@ -157,9 +163,10 @@ unsigned char* matrix_read(char* RGB, int size, char color) {
 
 }
 
-float* Gaussian_kernel(int sigma) {
+float* Gaussian_kernel(int sigma,int* kernel_size) {
     int k = 6 * sigma;                  //The length of the kernel, covering 99% of the Gaussian values        
     if (k % 2 == 0) k++;                //Make k odd which is easier for calculation
+    *kernel_size = k;
     int mu = (k - 1) / 2;               //The mu value
     float* K = (float*)malloc(k * sizeof(float));
 
@@ -168,6 +175,56 @@ float* Gaussian_kernel(int sigma) {
 
     return K;
 }
+
+
+unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length,char pattern) {
+    unsigned char* monochrome_fil;
+    int index = 0;
+    int dim1, dim2, flag1, flag2, flag3;
+    switch (pattern) {
+        case('x') :
+            dim1 = length;
+            dim2 = width;
+            flag1 = width;
+            flag2 = 1;
+            flag3 = 1;
+            break;
+        case('y'):
+            dim1 = width;
+            dim2 = length;
+            flag1 = 1;
+            flag2 = width;
+            flag3 = width;
+            break;
+        default:
+            cout << "Convolution Pattern doesn't apply!!\n";
+            exit(1);
+        
+    }
+    for (int row = 0; row < dim1; row++) {
+        for (int i = 0; i < dim2 - kernel_size; i++){
+        
+            float r = 0;
+            for (int j = 0; j < kernel_size; j++) {
+
+                r += monochrome[row * flag1 + i * flag2 + j * flag3] * k[j];
+                
+            }
+            
+            monochrome_fil[index] = round(r);
+            index++;
+        }
+
+    }
+
+
+
+
+
+}
+
+
+
 
 
 
