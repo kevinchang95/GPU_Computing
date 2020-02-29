@@ -1,4 +1,6 @@
 
+#define _USE_MATH_DEFINES
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <string>
@@ -7,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <math.h>
 using namespace std;
 
 
@@ -17,8 +20,12 @@ __global__ void addKernel(int *c, const int *a, const int *b)
     c[i] = a[i] + b[i];
 }
 
+////////////////Function Declarations/////////////
 unsigned char* matrix_read(char* RGB, int size, char color);
+float* Gaussian_kernel(int sigma);
 
+
+/////////////////////////////////////////////////
 
 int main(int argc, char* argv[])
 {
@@ -96,9 +103,23 @@ int main(int argc, char* argv[])
     G = matrix_read(RGB, size_mat, 'G');
     B = matrix_read(RGB, size_mat, 'B');
  
-    for (int i = 0; i < 10; i++)
-    cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";
+    /*for (int i = 0; i < 10; i++)
+    cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";*/
     
+    float* k ;                                                          //The Gaussian Kernel
+    k = Gaussian_kernel(sigma);
+
+    /*for (int i = 0; i < 100; i++) {
+
+        cout << k[i] << " ";
+    }*/
+
+
+
+
+
+
+
 
     return 0;
 }
@@ -134,6 +155,18 @@ unsigned char* matrix_read(char* RGB, int size, char color) {
 
     return monochrome;
 
+}
+
+float* Gaussian_kernel(int sigma) {
+    int k = 6 * sigma;                  //The length of the kernel, covering 99% of the Gaussian values        
+    if (k % 2 == 0) k++;                //Make k odd which is easier for calculation
+    int mu = (k - 1) / 2;               //The mu value
+    float* K = (float*)malloc(k * sizeof(float));
+
+    for (int i = 0; i < k; i++)
+        K[i] = exp(-pow((i - mu), 2) / 2 / sigma / sigma)/(sqrt(2 * sigma * sigma * M_PI));
+
+    return K;
 }
 
 
