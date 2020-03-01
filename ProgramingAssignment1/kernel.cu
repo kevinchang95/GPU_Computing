@@ -177,11 +177,12 @@ float* Gaussian_kernel(int sigma,int* kernel_size) {
 }
 
 
-unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length,char pattern) {
-    unsigned char* monochrome_fil;
+unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length) {
+    unsigned char* monochrome_fil1;
+    unsigned char* monochrome_fil2;
     int index = 0;
-    int dim1, dim2, flag1, flag2, flag3;
-    switch (pattern) {
+    //int dim1, dim2, flag1, flag2, flag3;
+    /*switch (pattern) {
         case('x') :
             dim1 = length;
             dim2 = width;
@@ -200,24 +201,41 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
             cout << "Convolution Pattern doesn't apply!!\n";
             exit(1);
         
-    }
-    for (int row = 0; row < dim1; row++) {
-        for (int i = 0; i < dim2 - kernel_size; i++){
+    }*/
+
+    ////////Convolution on X direction
+    for (int row = 0; row < length; row++) {
+        for (int i = 0; i < width - kernel_size; i++){
         
             float r = 0;
             for (int j = 0; j < kernel_size; j++) {
 
-                r += monochrome[row * flag1 + i * flag2 + j * flag3] * k[j];
+                r += monochrome[row * width + i + j ] * k[j];
                 
             }
             
-            monochrome_fil[index] = round(r);
+            monochrome_fil1[index] = round(r);
             index++;
         }
 
     }
+    index = 0;
+    ////////Convolution on Y direction
+    for (int row = 0; row < width - kernel_size; row++) {
+        for (int i = 0; i < length - kernel_size; i++) {
 
+            float r = 0;
+            for (int j = 0; j < kernel_size; j++) {
 
+                r += monochrome_fil2[row  + i * width + j * width] * k[j];
+
+            }
+
+            monochrome_fil2[index] = round(r);
+            index++;
+        }
+
+    }
 
 
 
