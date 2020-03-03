@@ -120,15 +120,55 @@ int main(int argc, char* argv[])
     unsigned char* G_fil;
     unsigned char* B_fil;
 
-    R_fil = convolve(R, k, kernel_size,width,length);
-    G_fil = convolve(G, k, kernel_size,width,length);
-    B_fil = convolve(B, k, kernel_size,width,length);
+    //R_fil = convolve(R, k, kernel_size,width,length);
+   //G_fil = convolve(G, k, kernel_size,width,length);
+   //B_fil = convolve(B, k, kernel_size,width,length);
+
+     /*for (int i = 0; i < 100; i++) {
+
+        cout << R_fil[i] << " ";
+    }*/
+
+     
+     string outputFilename = "hereford256_fil.ppm";
+     fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
+     string version1 = version + "\n";
+     char* version_out = &version1[0];
+     //string width_out = to_string(width - kernel_size + 1) + " ";
+     //string length_out = to_string(length - kernel_size + 1) + "\n";
+     string width_out =  "256 ";
+     string length_out = "128\n";
+     char* width_write = &width_out[0];
+     char* length_write = &length_out[0];
+     cout << width_out << endl;
+     cout << length_out << endl;
+     size_t size_width_out = width_out.size();
+     size_t size_length_out = length_out.size();
+     figure_out.write(version_out, version1.size());
+     figure_out.write( width_write, 4);
+     figure_out.write( length_write, 4);
+
+     figure_out.close();
 
 
-
-
+     
+     
+     
+     figure.close();
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 unsigned char* matrix_read(char* RGB, int size, char color) {
@@ -178,8 +218,8 @@ float* Gaussian_kernel(int sigma,int* kernel_size) {
 
 
 unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length) {
-    unsigned char* monochrome_fil1;
-    unsigned char* monochrome_fil2;
+    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - kernel_size) * length * sizeof(unsigned char));
+    unsigned char* monochrome_fil2 = (unsigned char*)malloc((width - kernel_size) * (length - kernel_size) * sizeof(unsigned char));
     int index = 0;
     //int dim1, dim2, flag1, flag2, flag3;
     /*switch (pattern) {
@@ -227,7 +267,7 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
             float r = 0;
             for (int j = 0; j < kernel_size; j++) {
 
-                r += monochrome_fil2[row  + i * width + j * width] * k[j];
+                r += monochrome_fil1[row  + i * width + j * width] * k[j];
 
             }
 
@@ -237,7 +277,7 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
 
     }
 
-
+    return monochrome_fil2;
 
 }
 
