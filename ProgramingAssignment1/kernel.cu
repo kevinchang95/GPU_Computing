@@ -120,33 +120,46 @@ int main(int argc, char* argv[])
     unsigned char* G_fil;
     unsigned char* B_fil;
 
-    //R_fil = convolve(R, k, kernel_size,width,length);
-   //G_fil = convolve(G, k, kernel_size,width,length);
-   //B_fil = convolve(B, k, kernel_size,width,length);
+    R_fil = convolve(R, k, kernel_size,width,length);
+    G_fil = convolve(G, k, kernel_size,width,length);
+    B_fil = convolve(B, k, kernel_size,width,length);
 
-     /*for (int i = 0; i < 100; i++) {
+     for (int i = 0; i < 100; i++) {
 
-        cout << R_fil[i] << " ";
-    }*/
+        cout << R_fil[i] << G_fil[i] << B_fil[i];
+    }
 
      
      string outputFilename = "hereford256_fil.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
-     //string width_out = to_string(width - kernel_size + 1) + " ";
-     //string length_out = to_string(length - kernel_size + 1) + "\n";
-     string width_out =  "256 ";
-     string length_out = "128\n";
+     string width_out = to_string(width - kernel_size + 1) + " ";
+     string length_out = to_string(length - kernel_size + 1) + "\n";
+     //string width_out =  "256 ";
+     //string length_out = "128\n";
      char* width_write = &width_out[0];
      char* length_write = &length_out[0];
-     cout << width_out << endl;
-     cout << length_out << endl;
+     //cout << width_out << endl;
+     //cout << length_out << endl;
      size_t size_width_out = width_out.size();
      size_t size_length_out = length_out.size();
-     figure_out.write(version_out, version1.size());
-     figure_out.write( width_write, 4);
-     figure_out.write( length_write, 4);
+     figure_out.write( version_out, version1.size());
+     figure_out.write( width_write, width_out.size());
+     figure_out.write( length_write, length_out.size());
+     string intensity_1 = intensity + '\n';
+     char* intensity_out = &intensity_1[0];
+     figure_out.write(intensity_out, intensity_1.size());
+     
+     //for (int i = 0; i < (width - kernel_size + 1) * (length - kernel_size + 1); i++) {
+     for (int i = 0; i < 100; i++) {
+         figure_out.write((char*)(R_fil + i), sizeof(unsigned char));
+         figure_out.write((char*)(G_fil + i), sizeof(unsigned char));
+         figure_out.write((char*)(B_fil + i), sizeof(unsigned char));
+     }
+
+
+
 
      figure_out.close();
 
@@ -155,6 +168,7 @@ int main(int argc, char* argv[])
      
      
      figure.close();
+
     return 0;
 }
 
@@ -242,15 +256,19 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
             exit(1);
         
     }*/
-
+    int index0 = 0;
     ////////Convolution on X direction
     for (int row = 0; row < length; row++) {
-        for (int i = 0; i < width - kernel_size; i++){
+        for (int i = 0; i < width - kernel_size + 1; i++){
         
             float r = 0;
-            for (int j = 0; j < kernel_size; j++) {
+            
+            float ker = 0;
 
-                r += monochrome[row * width + i + j ] * k[j];
+            for (int j = 0; j < kernel_size; j++) {
+                index0 = row * width + i + j;
+                ker = k[j];
+                r += monochrome[index0] * ker;
                 
             }
             
@@ -265,9 +283,12 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
         for (int i = 0; i < length - kernel_size; i++) {
 
             float r = 0;
+            int index0 = 0;
+            float ker = 0;
             for (int j = 0; j < kernel_size; j++) {
-
-                r += monochrome_fil1[row  + i * width + j * width] * k[j];
+                index0 = row + i * width + j * width;
+                ker = k[j];
+                r += monochrome_fil1[index0] * ker;
 
             }
 
