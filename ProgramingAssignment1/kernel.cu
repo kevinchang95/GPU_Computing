@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     }
 
      
-     string outputFilename = "hereford256_fil_origin.ppm";
+     string outputFilename = "hereford512_fil.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
@@ -151,8 +151,8 @@ int main(int argc, char* argv[])
      string intensity_1 = intensity + '\n';
      char* intensity_out = &intensity_1[0];
      figure_out.write(intensity_out, intensity_1.size());
-     //size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
-     size_t size_out = (width - kernel_size + 1) * length;
+     size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
+     //size_t size_out = (width - kernel_size + 1) * length;
      //size_t size_out = width  * length;
      
      //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
