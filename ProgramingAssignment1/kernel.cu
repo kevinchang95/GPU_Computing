@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     getline(figure, intensity);
     cout << "The intensity of the figure is " << intensity << endl;
 
-    int size_mat = width * length * 3;
+    int size_mat = sizeof(char) * width * length * 3;
     char *RGB = (char *)malloc(sizeof(char) * size_mat) ;
 
     // read data as a block:
@@ -130,14 +130,15 @@ int main(int argc, char* argv[])
     }
 
      
-     string outputFilename = "hereford256_fil.ppm";
+     string outputFilename = "hereford256_fil_origin.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
      string width_out = to_string(width - kernel_size + 1) + " ";
+     //string width_out = to_string(width ) + " ";
      string length_out = to_string(length - kernel_size + 1) + "\n";
-     //string width_out =  "256 ";
-     //string length_out = "128\n";
+     //string length_out = to_string(length) + "\n";
+     
      char* width_write = &width_out[0];
      char* length_write = &length_out[0];
      //cout << width_out << endl;
@@ -150,9 +151,18 @@ int main(int argc, char* argv[])
      string intensity_1 = intensity + '\n';
      char* intensity_out = &intensity_1[0];
      figure_out.write(intensity_out, intensity_1.size());
+     //size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
+     size_t size_out = (width - kernel_size + 1) * length;
+     //size_t size_out = width  * length;
      
-     //for (int i = 0; i < (width - kernel_size + 1) * (length - kernel_size + 1); i++) {
-     for (int i = 0; i < 100; i++) {
+     //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
+   /*  for (int i = 0; i < size_out; i++) {                         
+         figure_out.write((char*)(R + i), sizeof(unsigned char));   //Test the correctness of R[],G[] and B[], correct
+         figure_out.write((char*)(G + i), sizeof(unsigned char));
+         figure_out.write((char*)(B + i), sizeof(unsigned char));
+     }*/
+
+     for (int i = 0; i < size_out; i++) {
          figure_out.write((char*)(R_fil + i), sizeof(unsigned char));
          figure_out.write((char*)(G_fil + i), sizeof(unsigned char));
          figure_out.write((char*)(B_fil + i), sizeof(unsigned char));
@@ -187,8 +197,9 @@ int main(int argc, char* argv[])
 
 unsigned char* matrix_read(char* RGB, int size, char color) {
     
-    unsigned char* monochrome = (unsigned char*)malloc(size * sizeof(char));
-    int size_RGB = size / 3;
+    int size_RGB = size;
+    unsigned char* monochrome = (unsigned char*)malloc(size_RGB * sizeof(char));
+    
     //int size_RGB = 30;
     int i;
     switch (color)
@@ -232,8 +243,8 @@ float* Gaussian_kernel(int sigma,int* kernel_size) {
 
 
 unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length) {
-    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - kernel_size) * length * sizeof(unsigned char));
-    unsigned char* monochrome_fil2 = (unsigned char*)malloc((width - kernel_size) * (length - kernel_size) * sizeof(unsigned char));
+    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - kernel_size + 1) * length * sizeof(unsigned char));
+    unsigned char* monochrome_fil2 = (unsigned char*)malloc((width - kernel_size + 1) * (length - kernel_size + 1) * sizeof(unsigned char));
     int index = 0;
     //int dim1, dim2, flag1, flag2, flag3;
     /*switch (pattern) {
@@ -279,14 +290,16 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
     }
     index = 0;
     ////////Convolution on Y direction
-    for (int row = 0; row < width - kernel_size; row++) {
-        for (int i = 0; i < length - kernel_size; i++) {
+    int width_cut = width - kernel_size + 1;
+    int length_cut = length - kernel_size + 1;
+    for (int row = 0; row < length_cut; row++) {
+        for (int i = 0; i < width_cut; i++) {
 
             float r = 0;
             int index0 = 0;
             float ker = 0;
             for (int j = 0; j < kernel_size; j++) {
-                index0 = row + i * width + j * width;
+                index0 = row * width_cut + i + j * width_cut;
                 ker = k[j];
                 r += monochrome_fil1[index0] * ker;
 
