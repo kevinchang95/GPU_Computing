@@ -1,16 +1,16 @@
 
-#define _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES                           //Use math constant Pi
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <string>
+#include <string>                                   //string file is for introducing the variabe type String
 #include <iostream>
 #include <stdio.h>
-#include <fstream>
+#include <fstream>                                  //fstream is the stream for file I/O
 #include <sstream>
-#include <cmath>
+#include <cmath>                                    //cmath and math.h is for exponential and other math functions
 #include <math.h>
-using namespace std;
+using namespace std;                                //Using namespace, in simpliflication of call functions 
 
 
 
@@ -21,9 +21,9 @@ __global__ void addKernel(int *c, const int *a, const int *b)
 }
 
 ////////////////Function Declarations/////////////
-unsigned char* matrix_read(char* RGB, int size, char color);
-float* Gaussian_kernel(int sigma , int* kernel_size);
-unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width, int length);
+unsigned char* matrix_read(char* RGB, int size, char color);                //function for reading R,G,B matrix from original image
+float* Gaussian_kernel(int sigma , int* kernel_size);                       //function for generating standard Gaussian function for given parameter
+unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width, int length);    //The CPU-executed convolution function 
 
 /////////////////////////////////////////////////
 
@@ -31,34 +31,34 @@ int main(int argc, char* argv[])
 {
     if (argc != 3) {
         cout << "Argument number error!";
-        return 1;                    //Return if argument number is not 3
+        return 1;                                       //Return if argument number is not 3
     }
-    //string filename = argv[1];                   //the 2nd argument is the figure to be processed
-    string filename(argv[1]);
-    string version;
-    string comment;
-    char c;
-    //char * c = (char * )malloc(sizeof(char) * 1);
-    int sigma = atoi(argv[2]);                  //the 3rd argument is the sigma value for filter
+    string filename(argv[1]);                           //the 2nd argument is the figure to be processed
+    
+    
+    int sigma = atoi(argv[2]);                          //the 3rd argument is the sigma value for filter
 
     cout << "The filename for the figure is " << filename << endl;
     cout << "The sigma value for the filter is " << sigma << endl << endl;
 
    
-    fstream figure(filename , ifstream::in|ifstream::binary);
+    fstream figure(filename , ifstream::in|ifstream::binary);       //Open file using fstream
     
-    cout << "Reading file...\n";
+    cout << "Reading file...\n";                                    //Prompt in command window
 
     if (!(figure.is_open())) {
 
-        cout << "File open failed!!!" << endl;
+        cout << "File open failed!!!" << endl;                      //Check if file is open, if not, then return function
+        exit(1);
     }
     else {
         cout << "File open success!!" << endl;
     }
 
+    string version;
+    string comment;
 
-    getline(figure, version);
+    getline(figure, version);                                       //Reading the first line, which is the version of the image
     if (version == "P6") {
         
         cout << "Version correct! Version is " << version <<"\n";
