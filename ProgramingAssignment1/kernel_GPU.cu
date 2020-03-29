@@ -21,6 +21,36 @@ __global__ void Kernel(unsigned char *b, unsigned char *a)
 
 }
 
+
+__global__ void Conv_x(unsigned char* mono, unsigned char* kernel, unsigned char* fil, int length, int width, int size_kernel)
+{
+    size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    int index;
+    int index1;
+    float r = 0;
+    float ker = 0;
+    int width_fil = width - size_kernel + 1;
+    if (row >= length || column >= width_fil)   return;
+
+    for (int i = 0; i < size_kernel; i++) {
+        
+        index = row * width + column + i;
+        ker = kernel[i];
+        r += mono[index] * ker;
+
+    }
+
+
+    index1 = row * width_fil + column;
+    fil[index1] = round(r);
+    index1++;
+
+}
+
+
+
 ////////////////Function Declarations/////////////
 unsigned char* matrix_read(char* RGB, int size, char color);                //function for reading R,G,B matrix from original image
 float* Gaussian_kernel(int sigma , int* kernel_size);                       //function for generating standard Gaussian function for given parameter
@@ -108,8 +138,8 @@ int main(int argc, char* argv[])
     cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";*/
     
     float* k ;       
-    int kernel_size;
-    k = Gaussian_kernel(sigma,&kernel_size);                                         //The Gaussian Kernel
+    int size_kernel;
+    k = Gaussian_kernel(sigma , &size_kernel);                                         //The Gaussian Kernel
     //cout << "The size of the kernel is " << kernel_size << endl;
 
     /*for (int i = 0; i < 100; i++) {
@@ -121,9 +151,9 @@ int main(int argc, char* argv[])
     unsigned char* G_fil;
     unsigned char* B_fil;
 
-    R_fil = convolve_GPU(R, k, kernel_size,width,length);
-    G_fil = convolve_GPU(G, k, kernel_size,width,length);
-    B_fil = convolve_GPU(B, k, kernel_size,width,length);
+    R_fil = convolve_GPU(R, k, size_kernel, width, length);
+    G_fil = convolve_GPU(G, k, size_kernel, width, length);
+    B_fil = convolve_GPU(B, k, size_kernel, width, length);
 
      for (int i = 0; i < 100; i++) {
 
@@ -131,13 +161,13 @@ int main(int argc, char* argv[])
     }
 
      
-     string outputFilename = "hereford256_GPUoutput.ppm";
+     string outputFilename = "hereford256_GPU_conv_x.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
-     //string width_out = to_string(width - kernel_size + 1) + " ";
-     string width_out = to_string(width ) + " ";
-     //string length_out = to_string(length - kernel_size + 1) + "\n";
+     string width_out = to_string(width - size_kernel + 1) + " ";
+     //string width_out = to_string(width ) + " ";
+     //string length_out = to_string(length - size_kernel + 1) + "\n";
      string length_out = to_string(length) + "\n";
      
      char* width_write = &width_out[0];
@@ -152,9 +182,9 @@ int main(int argc, char* argv[])
      string intensity_1 = intensity + '\n';
      char* intensity_out = &intensity_1[0];
      figure_out.write(intensity_out, intensity_1.size());
-     //size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
-     //size_t size_out = (width - kernel_size + 1) * length;
-     size_t size_out = width  * length;
+     //size_t size_out = (width - size_kernel + 1) * (length - size_kernel + 1);
+     size_t size_out = (width - size_kernel + 1) * length;
+     //size_t size_out = width  * length;
      
      //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
    /*  for (int i = 0; i < size_out; i++) {                         
@@ -240,37 +270,64 @@ float* Gaussian_kernel(int sigma,int* kernel_size) {
 }
 
 
-unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int kernel_size,int width,int length) {
+unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel,int width,int length) {
+    
     int size_monochrome = width * length;
-    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - kernel_size + 1) * length * sizeof(unsigned char));
+    int size_fil1 = (width - size_kernel + 1) * length;
+    unsigned char* monochrome_fil1 = (unsigned char*)malloc( size_fil1 * sizeof(unsigned char));
     unsigned char* monochrome_fil2 = (unsigned char*)malloc( size_monochrome * sizeof(unsigned char));
        
-    unsigned char* dev_a = 0;
-    unsigned char* dev_b = 0;
+    unsigned char* dev_mono = 0;
+    unsigned char* dev_kernel = 0;
+    unsigned char* dev_fil1 = 0;
+    unsigned char* dev_fil2 = 0;
     cudaError_t cudaStatus;
     
 
-    cudaStatus = cudaMalloc((void**)&dev_a, size_monochrome * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**)&dev_mono, size_monochrome * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
+        fprintf(stderr, "cudaMalloc monochrome failed!");
        
     }
 
-    cudaStatus = cudaMalloc((void**)&dev_b, size_monochrome * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**)&dev_kernel, size_kernel * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
+        fprintf(stderr, "cudaMalloc kernel failed!");
         
     }
 
-    cudaStatus = cudaMemcpy(dev_a, monochrome, size_monochrome * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaStatus = cudaMalloc((void**)&dev_fil1, size_fil1 * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
+        fprintf(stderr, "cudaMalloc dev_fil failed!");
+
+    }
+
+    /*cudaStatus = cudaMalloc((void**)&dev_fil2, (width - size_kernel + 1) * (length - size_kernel + 1) * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMalloc failed!");
+
+    }*/
+
+    cudaStatus = cudaMemcpy(dev_mono, monochrome, size_monochrome * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy monochrome failed!");
         exit(1);
     }
 
+    cudaStatus = cudaMemcpy(dev_kernel, k, size_kernel * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy kernel failed!");
+        exit(1);
+    }
+    
+    dim3 threads( (width - size_kernel + 1), length);
     int BlkNum = size_monochrome / 1024 + 1;
+    int BlkNum_fil1 = size_fil1 / 1024 + 1;
 
-    Kernel<<< BlkNum, 1024 >>>(dev_b, dev_a);
+
+    //Kernel<<< BlkNum, 1024 >>>(dev_mono, dev_kernel);
+    Conv_x <<< BlkNum_fil1, 1024 >>> (dev_mono, dev_kernel, dev_fil1, length, width, size_kernel);
+
 
     // Check for any errors launching the kernel
 
@@ -288,13 +345,13 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int kernel_size
         exit(1);
     }
 
-    cudaStatus = cudaMemcpy(monochrome_fil2, dev_b, size_monochrome * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaStatus = cudaMemcpy(monochrome_fil1, dev_fil1, size_fil1 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
         exit(1);
     }
 
-    return monochrome_fil2;
+    return monochrome_fil1;
 
 
 }
