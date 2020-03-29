@@ -24,28 +24,28 @@ __global__ void Kernel(unsigned char *b, unsigned char *a)
 
 __global__ void Conv_x(unsigned char* mono, unsigned char* kernel, unsigned char* fil, int length, int width, int size_kernel)
 {
-    size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-    size_t column = blockIdx.x * blockDim.x + threadIdx.x;
-    
+    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t index1 = blockIdx.x * blockDim.x + threadIdx.x;
     int index;
-    int index1;
+    //int index1;
     float r = 0;
     float ker = 0;
     int width_fil = width - size_kernel + 1;
-    if (row >= length || column >= width_fil)   return;
-
+    //if (row >= length || column >= width_fil)   return;
+    if (index1 >= (length * width_fil))   return;
     for (int i = 0; i < size_kernel; i++) {
         
-        index = row * width + column + i;
+        index = index1 % width_fil + index1 / width_fil * width + i;
         ker = kernel[i];
         r += mono[index] * ker;
 
     }
 
 
-    index1 = row * width_fil + column;
+    //index1 = row * width_fil + column;
     fil[index1] = round(r);
-    index1++;
+    
 
 }
 
@@ -284,19 +284,19 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel
     cudaError_t cudaStatus;
     
 
-    cudaStatus = cudaMalloc((void**)&dev_mono, size_monochrome * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**) &dev_mono, size_monochrome * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc monochrome failed!");
        
     }
 
-    cudaStatus = cudaMalloc((void**)&dev_kernel, size_kernel * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**) &dev_kernel, size_kernel * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc kernel failed!");
         
     }
 
-    cudaStatus = cudaMalloc((void**)&dev_fil1, size_fil1 * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**) &dev_fil1, size_fil1 * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc dev_fil failed!");
 
