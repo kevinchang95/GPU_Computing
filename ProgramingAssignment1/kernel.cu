@@ -10,6 +10,8 @@
 #include <sstream>
 #include <cmath>                                    //cmath and math.h is for exponential and other math functions
 #include <math.h>
+#include <chrono>                                    //chromo is for introduce the high resolution clock
+
 using namespace std;                                //Using namespace, in simpliflication of call functions 
 
 
@@ -168,22 +170,38 @@ int main(int argc, char* argv[])
     unsigned char* G_fil_GPU;                                   //pointer for GPU filtered Green pixels
     unsigned char* B_fil_GPU;                                   //pointer for GPU filtered Blue pixels
 
-    cout << "\n\n" << "Starting CPU Gaussian filtering..." << endl;
+    chrono::high_resolution_clock::time_point start_CPU, stop_CPU;
+    chrono::high_resolution_clock::time_point start_GPU, stop_GPU;
 
+
+
+    cout << "\n\n" << "Starting CPU Gaussian filtering..." << endl;
+    start_CPU = std::chrono::high_resolution_clock::now();
+    
     R_fil_CPU = convolve_CPU(R, k, size_kernel, width, length);   //CPU Gaussian filter for Red pixel
     G_fil_CPU = convolve_CPU(G, k, size_kernel, width, length);   //CPU Gaussian filter for Green pixel
     B_fil_CPU = convolve_CPU(B, k, size_kernel, width, length);   //CPU Gaussian filter for Blue pixel
-
-    cout << "\n\n" <<"CPU Gaussian filtering finished!!!" << endl;
+    
+    stop_CPU = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, milli> d_CPU = stop_CPU - start_CPU;
+ 
+    cout << "\n\n" <<"CPU Gaussian filtering finished!!! Runtime: " << d_CPU.count() << "ms" << endl;
 
     cout << "\n\n" <<"Starting GPU Gaussian filtering..." << endl;
+    start_GPU = std::chrono::high_resolution_clock::now();
 
     R_fil_GPU = convolve_GPU(R, k, size_kernel, width, length);   //GPU Gaussian filter for Red pixel
     G_fil_GPU = convolve_GPU(G, k, size_kernel, width, length);   //GPU Gaussian filter for Green pixel
     B_fil_GPU = convolve_GPU(B, k, size_kernel, width, length);   //GPU Gaussian filter for Blue pixel
     
-    cout << "\n\n" << "GPU Gaussian filtering finished!!!" << endl;
+    stop_GPU = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, milli> d_GPU = stop_GPU - start_GPU;
+
+    cout << "\n\n" << "GPU Gaussian filtering finished!!! Runtime: " << d_GPU.count() << "ms" << endl;
  
+
+
+
     ////////// Write the filtered pixels to new ppm file ///////
     cout << "\n\n" << "Writing files..." << endl;
 
