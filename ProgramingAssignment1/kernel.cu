@@ -130,14 +130,14 @@ int main(int argc, char* argv[])
     }
 
      
-     string outputFilename = "hereford256_fil_x.ppm";
+     string outputFilename = "hereford256_fil.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
      string width_out = to_string(width - kernel_size + 1) + " ";
      //string width_out = to_string(width ) + " ";
-     //string length_out = to_string(length - kernel_size + 1) + "\n";
-     string length_out = to_string(length) + "\n";
+     string length_out = to_string(length - kernel_size + 1) + "\n";
+     //string length_out = to_string(length) + "\n";
      
      char* width_write = &width_out[0];
      char* length_write = &length_out[0];
@@ -151,8 +151,8 @@ int main(int argc, char* argv[])
      string intensity_1 = intensity + '\n';
      char* intensity_out = &intensity_1[0];
      figure_out.write(intensity_out, intensity_1.size());
-     //size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
-     size_t size_out = (width - kernel_size + 1) * length;
+     size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
+     //size_t size_out = (width - kernel_size + 1) * length;
      //size_t size_out = width  * length;
      
      //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
@@ -290,7 +290,7 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
     }
     index = 0;
     ////////Convolution on Y direction
-    /*int width_cut = width - kernel_size + 1;
+    int width_cut = width - kernel_size + 1;
     int length_cut = length - kernel_size + 1;
     for (int row = 0; row < length_cut; row++) {
         for (int i = 0; i < width_cut; i++) {
@@ -309,9 +309,9 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
             index++;
         }
 
-    }*/
+    }
 
-    return monochrome_fil1;
+    return monochrome_fil2;
 
 }
 
