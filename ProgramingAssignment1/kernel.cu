@@ -14,18 +14,72 @@ using namespace std;                                //Using namespace, in simpli
 
 
 
-__global__ void addKernel(int *c, const int *a, const int *b)
+
+__global__ void Conv_x(unsigned char* mono, float* kernel, unsigned char* fil, int length, int width, int size_kernel)
 {
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
+    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    int index1 = blockIdx.x * blockDim.x + threadIdx.x;
+    int index;
+    //int index1;
+    float r = 0;
+    float ker = 0;
+    int width_fil = width - size_kernel + 1;
+    //if (row >= length || column >= width_fil)   return;
+    if (index1 >= (length * width_fil))   return;
+    for (int i = 0; i < size_kernel; i++) {
+
+        index = index1 % width_fil + index1 / width_fil * width + i;
+        ker = kernel[i];
+        r += mono[index] * ker;
+
+    }
+
+    //index1 = row * width_fil + column;
+    fil[index1] = round(r);
+
 }
+
+__global__ void Conv_y(unsigned char* fil1, float* kernel, unsigned char* fil2, int length, int width, int size_kernel)
+{
+    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    int index1 = blockIdx.x * blockDim.x + threadIdx.x;
+    int index;
+    //int index1;
+    float r = 0;
+    float ker = 0;
+    int width_fil = width - size_kernel + 1;
+    int length_fil = length - size_kernel + 1;
+   
+    if (index1 >= (length_fil * width_fil))   return;
+    for (int i = 0; i < size_kernel; i++) {
+
+        index = index1 + i * width_fil;
+        ker = kernel[i];
+        r += fil1[index] * ker;
+
+    }
+
+    //index1 = row * width_fil + column;
+    fil2[index1] = round(r);
+
+}
+
+
+
+
 
 ////////////////Function Declarations/////////////
 unsigned char* matrix_read(char* RGB, int size, char color);                //function for reading R,G,B matrix from original image
 float* Gaussian_kernel(int sigma , int* kernel_size);                       //function for generating standard Gaussian function for given parameter
-unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width, int length);    //The CPU-executed convolution function 
+unsigned char* convolve_CPU(unsigned char* monochrome, float* k, int kernel_size,int width, int length);    //The CPU-executed convolution function 
+unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int kernel_size, int width, int length);    //The GPU-executed convolution function 
 
+                                                                                                             
 /////////////////////////////////////////////////
+
+
 
 int main(int argc, char* argv[])
 {
@@ -95,100 +149,90 @@ int main(int argc, char* argv[])
 
     figure.close();
 
-    unsigned char* R;
-    unsigned char* G;
-    unsigned char* B;
+    unsigned char* R;                                       //unsigned char pointer for Red pixels
+    unsigned char* G;                                       //unsigned char pointer for Green pixels
+    unsigned char* B;                                       //unsigned char pointer for Blue pixel
 
-    R = matrix_read(RGB,size_mat,'R');
-    G = matrix_read(RGB, size_mat, 'G');
-    B = matrix_read(RGB, size_mat, 'B');
+    R = matrix_read(RGB,size_mat,'R');                      //Read red pixel from RGB matrix
+    G = matrix_read(RGB, size_mat, 'G');                    //Read green pixel from RGB matrix
+    B = matrix_read(RGB, size_mat, 'B');                    //Read blue pixel from RGB matrix
  
-    /*for (int i = 0; i < 10; i++)
-    cout << +R[i] << " " << +G[i] << " " << +B[i] <<" ";*/
+   
     
-    float* k ;       
-    int kernel_size;
-    k = Gaussian_kernel(sigma,&kernel_size);                                         //The Gaussian Kernel
-    //cout << "The size of the kernel is " << kernel_size << endl;
+    float* k ;                                              //float pointer for Gaussian kernel
+    int size_kernel;
+    k = Gaussian_kernel(sigma,&size_kernel);                //Get Gaussian Kernel and store it to *k
+  
 
-    /*for (int i = 0; i < 100; i++) {
+    unsigned char* R_fil_CPU;                                   //pointer for CPU filtered Red pixels
+    unsigned char* G_fil_CPU;                                   //pointer for CPU filtered Green pixels
+    unsigned char* B_fil_CPU;                                   //pointer for CPU filtered Blue pixels
 
-        cout << k[i] << " ";
-    }*/
+    unsigned char* R_fil_GPU;                                   //pointer for GPU filtered Red pixels
+    unsigned char* G_fil_GPU;                                   //pointer for GPU filtered Green pixels
+    unsigned char* B_fil_GPU;                                   //pointer for GPU filtered Blue pixels
 
-    unsigned char* R_fil;
-    unsigned char* G_fil;
-    unsigned char* B_fil;
+    R_fil_CPU = convolve_CPU(R, k, size_kernel,width,length);   //CPU Gaussian filter for Red pixel
+    G_fil_CPU = convolve_CPU(G, k, size_kernel,width,length);   //CPU Gaussian filter for Green pixel
+    B_fil_CPU = convolve_CPU(B, k, size_kernel,width,length);   //CPU Gaussian filter for Blue pixel
 
-    R_fil = convolve(R, k, kernel_size,width,length);
-    G_fil = convolve(G, k, kernel_size,width,length);
-    B_fil = convolve(B, k, kernel_size,width,length);
 
-     for (int i = 0; i < 100; i++) {
+    R_fil_GPU = convolve_GPU(R, k, size_kernel, width, length);   //GPU Gaussian filter for Red pixel
+    G_fil_GPU = convolve_GPU(G, k, size_kernel, width, length);   //GPU Gaussian filter for Green pixel
+    B_fil_GPU = convolve_GPU(B, k, size_kernel, width, length);   //GPU Gaussian filter for Blue pixel
+    
 
-        cout << R_fil[i] << G_fil[i] << B_fil[i];
+ 
+    ////////// Write the filtered pixels to new ppm file ///////
+    string outputFile_CPU = "hereford256_fil_CPU.ppm";                      //define CPU filtered filename
+    string outputFile_GPU = "hereford256_fil_GPU.ppm";                      //define GPU filtered filename
+
+    fstream figure_CPU(outputFile_CPU, ofstream::out | ofstream::binary);   //Open CPU filtered file
+    fstream figure_GPU(outputFile_GPU, ofstream::out | ofstream::binary);   //Open GPU filtered file
+
+    string version1 = version + "\n";                                       //Same version number with input, add endline 
+    char* version_out = &version1[0];
+    string width_out = to_string(width - size_kernel + 1) + " ";            //Modified width in file
+    string length_out = to_string(length - size_kernel + 1) + "\n";         //Modified length in file
+    char* width_write = &width_out[0];
+    char* length_write = &length_out[0];
+    string intensity_1 = intensity + '\n';                                  //Same intensity with input, add endline
+    char* intensity_out = &intensity_1[0];
+
+    figure_CPU.write( version_out, version1.size());                        //Write version, width, length, indensity for CPU filtered file
+    figure_CPU.write( width_write, width_out.size());
+    figure_CPU.write( length_write, length_out.size());
+    figure_CPU.write( intensity_out, intensity_1.size());
+
+    figure_GPU.write( version_out, version1.size());                        //Write version, width, length, indensity for GPU filtered file
+    figure_GPU.write( width_write, width_out.size());
+    figure_GPU.write( length_write, length_out.size());
+    figure_GPU.write( intensity_out, intensity_1.size());
+
+    size_t size_out = (width - size_kernel + 1) * (length - size_kernel + 1);   //New filtered image size
+    
+
+    for (int i = 0; i < size_out; i++) {
+        figure_CPU.write((char*)(R_fil_CPU + i), sizeof(unsigned char));    //Write R,G,B pixel iteratively in CPU file
+        figure_CPU.write((char*)(G_fil_CPU + i), sizeof(unsigned char));
+        figure_CPU.write((char*)(B_fil_CPU + i), sizeof(unsigned char));
     }
 
-     
-     string outputFilename = "hereford256_fil.ppm";
-     fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
-     string version1 = version + "\n";
-     char* version_out = &version1[0];
-     string width_out = to_string(width - kernel_size + 1) + " ";
-     //string width_out = to_string(width ) + " ";
-     string length_out = to_string(length - kernel_size + 1) + "\n";
-     //string length_out = to_string(length) + "\n";
-     
-     char* width_write = &width_out[0];
-     char* length_write = &length_out[0];
-     //cout << width_out << endl;
-     //cout << length_out << endl;
-     size_t size_width_out = width_out.size();
-     size_t size_length_out = length_out.size();
-     figure_out.write( version_out, version1.size());
-     figure_out.write( width_write, width_out.size());
-     figure_out.write( length_write, length_out.size());
-     string intensity_1 = intensity + '\n';
-     char* intensity_out = &intensity_1[0];
-     figure_out.write(intensity_out, intensity_1.size());
-     size_t size_out = (width - kernel_size + 1) * (length - kernel_size + 1);
-     //size_t size_out = (width - kernel_size + 1) * length;
-     //size_t size_out = width  * length;
-     
-     //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
-   /*  for (int i = 0; i < size_out; i++) {                         
-         figure_out.write((char*)(R + i), sizeof(unsigned char));   //Test the correctness of R[],G[] and B[], correct
-         figure_out.write((char*)(G + i), sizeof(unsigned char));
-         figure_out.write((char*)(B + i), sizeof(unsigned char));
-     }*/
-
-     for (int i = 0; i < size_out; i++) {
-         figure_out.write((char*)(R_fil + i), sizeof(unsigned char));
-         figure_out.write((char*)(G_fil + i), sizeof(unsigned char));
-         figure_out.write((char*)(B_fil + i), sizeof(unsigned char));
-     }
+    for (int i = 0; i < size_out; i++) {
+        figure_GPU.write((char*)(R_fil_GPU + i), sizeof(unsigned char));    //Write R,G,B pixel iteratively in GPU file
+        figure_GPU.write((char*)(G_fil_GPU + i), sizeof(unsigned char));
+        figure_GPU.write((char*)(B_fil_GPU + i), sizeof(unsigned char));
+    }
 
 
+    figure_CPU.close();                     //Close CPU file
+    figure_GPU.close();                     //Close GPU file
 
-
-     figure_out.close();
-
-
-     
-     
-     
-     figure.close();
+          
+    figure.close();                         //Close original image file
 
     return 0;
 }
-
-
-
-
-
-
-
-
 
 
 
