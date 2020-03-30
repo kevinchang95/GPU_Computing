@@ -42,12 +42,38 @@ __global__ void Conv_x(unsigned char* mono, float* kernel, unsigned char* fil, i
 
     }
 
+    //index1 = row * width_fil + column;
+    fil[index1] = round(r);
+
+}
+
+__global__ void Conv_y(unsigned char* mono, float* kernel, unsigned char* fil, int length, int width, int size_kernel)
+{
+    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    int index1 = blockIdx.x * blockDim.x + threadIdx.x;
+    int index;
+    //int index1;
+    float r = 0;
+    float ker = 0;
+    int width_fil = width - size_kernel + 1;
+    int length_fil = length - size_kernel + 1;
+    //if (row >= length || column >= width_fil)   return;
+    if (index1 >= (length_fil * width_fil))   return;
+    for (int i = 0; i < size_kernel; i++) {
+
+        index = index1 + i * width_fil;
+        ker = kernel[i];
+        r += mono[index] * ker;
+
+    }
 
     //index1 = row * width_fil + column;
     fil[index1] = round(r);
-    
 
 }
+
+
 
 
 
@@ -161,14 +187,14 @@ int main(int argc, char* argv[])
     }
 
      
-     string outputFilename = "hereford256_GPU_conv_x.ppm";
+     string outputFilename = "hereford256_GPU_conv_xy.ppm";
      fstream figure_out(outputFilename, ofstream::out | ofstream::binary);
      string version1 = version + "\n";
      char* version_out = &version1[0];
      string width_out = to_string(width - size_kernel + 1) + " ";
      //string width_out = to_string(width ) + " ";
-     //string length_out = to_string(length - size_kernel + 1) + "\n";
-     string length_out = to_string(length) + "\n";
+     string length_out = to_string(length - size_kernel + 1) + "\n";
+     //string length_out = to_string(length) + "\n";
      
      char* width_write = &width_out[0];
      char* length_write = &length_out[0];
@@ -182,8 +208,8 @@ int main(int argc, char* argv[])
      string intensity_1 = intensity + '\n';
      char* intensity_out = &intensity_1[0];
      figure_out.write(intensity_out, intensity_1.size());
-     //size_t size_out = (width - size_kernel + 1) * (length - size_kernel + 1);
-     size_t size_out = (width - size_kernel + 1) * length;
+     size_t size_out = (width - size_kernel + 1) * (length - size_kernel + 1);
+     //size_t size_out = (width - size_kernel + 1) * length;
      //size_t size_out = width  * length;
      
      //figure_out.write(RGB, size_mat);                             //Test the correctness of RGB[] read, correct
@@ -282,8 +308,9 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel
     
     int size_monochrome = width * length;
     int size_fil1 = (width - size_kernel + 1) * length;
+    int size_fil2 = (width - size_kernel + 1) * (length - size_kernel + 1);
     unsigned char* monochrome_fil1 = (unsigned char*)malloc( size_fil1 * sizeof(unsigned char));
-    unsigned char* monochrome_fil2 = (unsigned char*)malloc( size_monochrome * sizeof(unsigned char));
+    unsigned char* monochrome_fil2 = (unsigned char*)malloc( size_fil2 * sizeof(unsigned char));
        
     unsigned char* dev_mono = 0;
     float* dev_kernel = 0;
@@ -320,11 +347,11 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel
 
     }
 
-    /*cudaStatus = cudaMalloc((void**)&dev_fil2, (width - size_kernel + 1) * (length - size_kernel + 1) * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**)&dev_fil2, size_fil2 * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc failed!");
 
-    }*/
+    }
 
     cudaStatus = cudaMemcpy(dev_mono, monochrome, size_monochrome * sizeof(unsigned char), cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
@@ -338,14 +365,14 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel
         exit(1);
     }
     
-    dim3 threads( (width - size_kernel + 1), length);
+    //dim3 threads( (width - size_kernel + 1), length);
     int BlkNum = size_monochrome / 1024 + 1;
     int BlkNum_fil1 = size_fil1 / 1024 + 1;
-
+    int BlkNum_fil2 = size_fil2 / 1024 + 1;
 
     //Kernel<<< BlkNum, 1024 >>>(dev_mono, dev_kernel);
     Conv_x <<< BlkNum_fil1, 1024 >>> (dev_mono, dev_kernel, dev_fil1, length, width, size_kernel);
-
+    Conv_y <<< BlkNum_fil2, 1024 >>> (dev_fil1, dev_kernel, dev_fil2, length, width, size_kernel);
 
     // Check for any errors launching the kernel
 
@@ -363,13 +390,29 @@ unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel
         exit(1);
     }
 
+    
+    
+    
+    /*cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+        exit(1);
+    }*/
+    
     cudaStatus = cudaMemcpy(monochrome_fil1, dev_fil1, size_fil1 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
         exit(1);
     }
 
-    return monochrome_fil1;
+    cudaStatus = cudaMemcpy(monochrome_fil2, dev_fil2, size_fil2 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy failed!");
+        exit(1);
+    }
+
+
+    return monochrome_fil2;
 
 
 }
