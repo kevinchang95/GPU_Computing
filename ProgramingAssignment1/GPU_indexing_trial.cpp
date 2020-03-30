@@ -23,12 +23,12 @@ int main() {
 
     for (int index1 = 0; index1 < 1000; index1++) {
 
-        for (int j = 0; j < size_kernel; j++) {
+        //for (int j = 0; j < size_kernel; j++) {
 
-            index0 = index1 % width_fil + index1 / width_fil * width + j;
+            index0 = index1 % width_fil + index1 / width_fil * width ;
             
 
-        }
+        //}
         cout << "index1 now is: " << index1 << " ,index0 now is: " << index0 << endl;
     }
 
