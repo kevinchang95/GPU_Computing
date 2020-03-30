@@ -17,52 +17,50 @@ using namespace std;                                //Using namespace, in simpli
 
 __global__ void Conv_x(unsigned char* mono, float* kernel, unsigned char* fil, int length, int width, int size_kernel)
 {
-    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
-    int index1 = blockIdx.x * blockDim.x + threadIdx.x;
+   
+    int index1 = blockIdx.x * blockDim.x + threadIdx.x;                 //In 1D grid, index1 is the element index of X-filtered matrix
     int index;
-    //int index1;
     float r = 0;
     float ker = 0;
     int width_fil = width - size_kernel + 1;
-    //if (row >= length || column >= width_fil)   return;
-    if (index1 >= (length * width_fil))   return;
+    
+    if (index1 >= (length * width_fil))   return;                       //Avoid segmentation fault
+    
     for (int i = 0; i < size_kernel; i++) {
 
-        index = index1 % width_fil + index1 / width_fil * width + i;
+        index = index1 % width_fil + index1 / width_fil * width + i;    //Get element index in original image matrix from x-filtered element index
         ker = kernel[i];
         r += mono[index] * ker;
 
     }
 
-    //index1 = row * width_fil + column;
-    fil[index1] = round(r);
+    
+    fil[index1] = round(r);                                             //Store element into GPU pointer
 
 }
 
 __global__ void Conv_y(unsigned char* fil1, float* kernel, unsigned char* fil2, int length, int width, int size_kernel)
 {
-    //size_t row = blockIdx.y * blockDim.y + threadIdx.y;
-    //size_t column = blockIdx.x * blockDim.x + threadIdx.x;
-    int index1 = blockIdx.x * blockDim.x + threadIdx.x;
+   
+    int index1 = blockIdx.x * blockDim.x + threadIdx.x;                 //In 1D grid, index1 is the element index of Y-filtered matrix
     int index;
-    //int index1;
+   
     float r = 0;
     float ker = 0;
     int width_fil = width - size_kernel + 1;
     int length_fil = length - size_kernel + 1;
    
-    if (index1 >= (length_fil * width_fil))   return;
+    if (index1 >= (length_fil * width_fil))   return;                   //Avoid segment fault
     for (int i = 0; i < size_kernel; i++) {
 
-        index = index1 + i * width_fil;
+        index = index1 + i * width_fil;                                 //Get element index of X-filtered matrix from Y-filtered matrix
         ker = kernel[i];
         r += fil1[index] * ker;
 
     }
 
-    //index1 = row * width_fil + column;
-    fil2[index1] = round(r);
+    
+    fil2[index1] = round(r);                                            //Store element into GPU pointer
 
 }
 
@@ -106,7 +104,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
     else {
-        cout << "File open success!!" << endl;
+        cout << "File open success!!" << endl;                      //If file is open, prompt message
     }
 
     string version;
@@ -115,39 +113,37 @@ int main(int argc, char* argv[])
     getline(figure, version);                                       //Reading the first line, which is the version of the image
     if (version == "P6") {
         
-        cout << "Version correct! Version is " << version <<"\n";
+        cout << "Version correct! Version is " << version <<"\n";   //If version is the desired version, prompt the version number
     }
     else {
-        cout << "Version wrong! Exiting...\n";
+        cout << "Version wrong! Exiting...\n";                      //If version is not the desired version, return function
         return 1;
     }
 
     do {
-        getline(figure, comment);
+        getline(figure, comment);                                   //If the string starts with #, it is the comment, so read until all comment is gone
             
     } while (comment[0] == '#');
 
-    //cout << comment <<endl;
+    
 
-    // read figure width and length
+    // read figure width, length and image color intensity level
     int width = 0;
     int length = 0;
     const char* size_string = comment.c_str();                             //Convert string to const char, which sccanf signature needed
     sscanf(size_string, "%d %d", &width, &length);                         //read integer pattern from the string
     cout << "The width of the figure is " << width << ", and the length is " << length << endl;
     string intensity ;
-    getline(figure, intensity);
+    getline(figure, intensity);                                             //read intensity level
     cout << "The intensity of the figure is " << intensity << endl;
 
-    int size_mat = sizeof(char) * width * length * 3;
-    char *RGB = (char *)malloc(sizeof(char) * size_mat) ;
+    int size_mat = sizeof(char) * width * length * 3;                       //The total size of RGB matrix is 3 times of the image size
+    char *RGB = (char *)malloc(sizeof(char) * size_mat);                    //allocate space for RGB matrix read from file
 
     // read data as a block:
     figure.read(RGB, size_mat);
 
-    //cout <<  RGB << endl;
-
-    figure.close();
+    figure.close();                                         //Close original image file
 
     unsigned char* R;                                       //unsigned char pointer for Red pixels
     unsigned char* G;                                       //unsigned char pointer for Green pixels
@@ -172,18 +168,25 @@ int main(int argc, char* argv[])
     unsigned char* G_fil_GPU;                                   //pointer for GPU filtered Green pixels
     unsigned char* B_fil_GPU;                                   //pointer for GPU filtered Blue pixels
 
-    R_fil_CPU = convolve_CPU(R, k, size_kernel,width,length);   //CPU Gaussian filter for Red pixel
-    G_fil_CPU = convolve_CPU(G, k, size_kernel,width,length);   //CPU Gaussian filter for Green pixel
-    B_fil_CPU = convolve_CPU(B, k, size_kernel,width,length);   //CPU Gaussian filter for Blue pixel
+    cout << "\n\n" << "Starting CPU Gaussian filtering..." << endl;
 
+    R_fil_CPU = convolve_CPU(R, k, size_kernel, width, length);   //CPU Gaussian filter for Red pixel
+    G_fil_CPU = convolve_CPU(G, k, size_kernel, width, length);   //CPU Gaussian filter for Green pixel
+    B_fil_CPU = convolve_CPU(B, k, size_kernel, width, length);   //CPU Gaussian filter for Blue pixel
+
+    cout << "\n\n" <<"CPU Gaussian filtering finished!!!" << endl;
+
+    cout << "\n\n" <<"Starting GPU Gaussian filtering..." << endl;
 
     R_fil_GPU = convolve_GPU(R, k, size_kernel, width, length);   //GPU Gaussian filter for Red pixel
     G_fil_GPU = convolve_GPU(G, k, size_kernel, width, length);   //GPU Gaussian filter for Green pixel
     B_fil_GPU = convolve_GPU(B, k, size_kernel, width, length);   //GPU Gaussian filter for Blue pixel
     
-
+    cout << "\n\n" << "GPU Gaussian filtering finished!!!" << endl;
  
     ////////// Write the filtered pixels to new ppm file ///////
+    cout << "\n\n" << "Writing files..." << endl;
+
     string outputFile_CPU = "hereford256_fil_CPU.ppm";                      //define CPU filtered filename
     string outputFile_GPU = "hereford256_fil_GPU.ppm";                      //define GPU filtered filename
 
@@ -229,7 +232,7 @@ int main(int argc, char* argv[])
     figure_GPU.close();                     //Close GPU file
 
           
-    figure.close();                         //Close original image file
+                           
 
     return 0;
 }
@@ -239,31 +242,30 @@ int main(int argc, char* argv[])
 
 
 
-unsigned char* matrix_read(char* RGB, int size, char color) {
+unsigned char* matrix_read(char* RGB, int size, char color) {                                   //Read monochrome matrix from RGB matrix
     
-    int size_RGB = size;
-    unsigned char* monochrome = (unsigned char*)malloc(size_RGB * sizeof(char));
+    int size_monochrome = size / 3;                                                             //initialize the size of monochrome, which is 1/3 of the pixel size
+    unsigned char* monochrome = (unsigned char*)malloc(size_monochrome * sizeof(char));         //allocate monochrome pointer
     
-    //int size_RGB = 30;
-    int i;
-    switch (color)
+    int i;                          //i is the initial read position from RGB matrix
+    switch (color)                  //The order of RGB matrix is : R, G, B, R, G, B,...etc
     {
-    case 'R':
-        i = 0;
-        break;
-    case 'G':
-        i = 1;
-        break;
-    case 'B':
-        i = 2;
-        break;
+        case 'R':
+            i = 0;                  //Red color matrix starts from first position
+            break;
+        case 'G':
+            i = 1;                  //Green color matrix starts from second position
+            break;
+        case 'B':
+            i = 2;                  //Blue color matrix starts from third position
+            break;
     }
-    int inc = 3;
-    int j = 0;
-    for (i ; i < size_RGB ; i+=inc ) {
+    int inc = 3;                    //increment of monochrome is 3
+    int j = 0;                      //initial position of monochrome
+    for (i ; i < size ; i+=inc ) {
         
-        *(monochrome + j) = unsigned char(RGB[i]);
-        j += 1;
+        *(monochrome + j) = unsigned char(RGB[i]);          //Read monochrome matrix from RGB matrix
+        j += 1;                                             //increment monochrome pointer
         
 
     }
@@ -272,84 +274,69 @@ unsigned char* matrix_read(char* RGB, int size, char color) {
 
 }
 
-float* Gaussian_kernel(int sigma,int* kernel_size) {
-    int k = 6 * sigma;                  //The length of the kernel, covering 99% of the Gaussian values        
-    if (k % 2 == 0) k++;                //Make k odd which is easier for calculation
-    *kernel_size = k;
-    int mu = (k - 1) / 2;               //The mu value
-    float* K = (float*)malloc(k * sizeof(float));
+float* Gaussian_kernel(int sigma,int* kernel_size) {        //Generate Gaussian filter kernel
+    int k = 6 * sigma;                                      //The length of the kernel, covering 99% of the Gaussian values, which is 3*sigma each side      
+    if (k % 2 == 0) k++;                                    //Make k odd which is easier for calculation
+    *kernel_size = k;                                       //Return kernel size 
+    int mu = (k - 1) / 2;                                   //The mu value
+    float* K = (float*)malloc(k * sizeof(float));           //allocate pointer for storing kernel
 
     for (int i = 0; i < k; i++)
         K[i] = exp(-pow((i - mu), 2) / 2 / sigma / sigma)/(sqrt(2 * sigma * sigma * M_PI));
-
+                                                            //Calculation of discrete Gaussian kernel
     return K;
 }
 
 
-unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int width,int length) {
-    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - kernel_size + 1) * length * sizeof(unsigned char));
-    unsigned char* monochrome_fil2 = (unsigned char*)malloc((width - kernel_size + 1) * (length - kernel_size + 1) * sizeof(unsigned char));
+unsigned char* convolve_CPU(unsigned char* monochrome, float* k, int size_kernel,int width,int length) {
+    
+    unsigned char* monochrome_fil1 = (unsigned char*)malloc( (width - size_kernel + 1) * length * sizeof(unsigned char));
+    unsigned char* monochrome_fil2 = (unsigned char*)malloc((width - size_kernel + 1) * (length - size_kernel + 1) * sizeof(unsigned char));
+    //allocate the pointer to store the image matrix after X-direction convolution and Y-direction convolution
+    
+    int width_cut = width - size_kernel + 1;                    //X-direction filtered image width should decrease size by (size_kernel - 1)
+    int length_cut = length - size_kernel + 1;                  //Y-direction filtered image length should decrease size by (size_kernel - 1)
     int index = 0;
-    //int dim1, dim2, flag1, flag2, flag3;
-    /*switch (pattern) {
-        case('x') :
-            dim1 = length;
-            dim2 = width;
-            flag1 = width;
-            flag2 = 1;
-            flag3 = 1;
-            break;
-        case('y'):
-            dim1 = width;
-            dim2 = length;
-            flag1 = 1;
-            flag2 = width;
-            flag3 = width;
-            break;
-        default:
-            cout << "Convolution Pattern doesn't apply!!\n";
-            exit(1);
-        
-    }*/
+    float r;
     int index0 = 0;
+    float ker = 0;
+    
     ////////Convolution on X direction
-    for (int row = 0; row < length; row++) {
-        for (int i = 0; i < width - kernel_size + 1; i++){
-        
-            float r = 0;
-            
-            float ker = 0;
-
-            for (int j = 0; j < kernel_size; j++) {
-                index0 = row * width + i + j;
+    for (int row = 0; row < length; row++) {                    //the row index of the matrix , the original and X filtered image have the same row number
+        for (int i = 0; i < width_cut; i++){                    //the column index of the matrix
+            r = 0;                                              //Empty the sum before every iteration
+            for (int j = 0; j < size_kernel; j++) {             //sum of the multiplication of kernel and original image 
+                index0 = row * width + i + j;                   //index0 is the element index of the original image
                 ker = k[j];
                 r += monochrome[index0] * ker;
                 
             }
             
-            monochrome_fil1[index] = round(r);
+            monochrome_fil1[index] = round(r);                  //Assign the result of every element to new pointer iteratively
             index++;
         }
 
     }
-    index = 0;
-    ////////Convolution on Y direction
-    int width_cut = width - kernel_size + 1;
-    int length_cut = length - kernel_size + 1;
-    for (int row = 0; row < length_cut; row++) {
-        for (int i = 0; i < width_cut; i++) {
 
-            float r = 0;
-            int index0 = 0;
-            float ker = 0;
-            for (int j = 0; j < kernel_size; j++) {
-                index0 = row * width_cut + i + j * width_cut;
+    
+    ////////Convolution on Y direction
+    
+    index = 0;                                                  //Redefine all the loop counters
+  
+    index0 = 0;
+    ker = 0;
+
+    for (int row = 0; row < length_cut; row++) {                //The reduced row index of Y-filtered image
+        for (int i = 0; i < width_cut; i++) {
+            r = 0;                                              //Empty the sum before every iteration
+            for (int j = 0; j < size_kernel; j++) {
+                index0 = row * width_cut + i + j * width_cut;   //index0 is the element index in X-filtered image
                 ker = k[j];
                 r += monochrome_fil1[index0] * ker;
 
             }
 
-            monochrome_fil2[index] = round(r);
+            monochrome_fil2[index] = round(r);                  //Assign the result of every element to new pointer iteratively
             index++;
         }
 
@@ -360,135 +347,102 @@ unsigned char* convolve(unsigned char* monochrome, float* k, int kernel_size,int
 }
 
 
+unsigned char* convolve_GPU(unsigned char* monochrome, float* k, int size_kernel, int width, int length) {
+
+    int size_monochrome = width * length;                                       //Original size of the monochrome matrix
+    int size_fil1 = (width - size_kernel + 1) * length;                         //size of X-filtered image matrix
+    int size_fil2 = (width - size_kernel + 1) * (length - size_kernel + 1);     //size of Y-filtered image matrix
+    unsigned char* monochrome_fil1 = (unsigned char*)malloc(size_fil1 * sizeof(unsigned char));
+    unsigned char* monochrome_fil2 = (unsigned char*)malloc(size_fil2 * sizeof(unsigned char));
+
+    unsigned char* dev_mono = 0;                    //monochrome matrix pointer in GPU device
+    float* dev_kernel = 0;                          //Gaussian kernel pointer in GPU device
+    unsigned char* dev_fil1 = 0;                    //X-filtered image pointer in GPU device
+    unsigned char* dev_fil2 = 0;                    //Y-filtered image pointer in GPU device
+    cudaError_t cudaStatus;                         //sentinel variable for observing potential errors
 
 
-
-
-//////////////Stratches//////////////////
-//cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
-// // Add vectors in parallel.
-//cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-//if (cudaStatus != cudaSuccess) {
-//    fprintf(stderr, "addWithCuda failed!");
-//    return 1;
-//}
-//
-//
-//// Helper function for using CUDA to add vectors in parallel.
-//cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size)
-//{
-//    int* dev_a = 0;
-//    int* dev_b = 0;
-//    int* dev_c = 0;
-//    cudaError_t cudaStatus;
-//
-//    // Choose which GPU to run on, change this on a multi-GPU system.
-//    cudaStatus = cudaSetDevice(0);
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-//        goto Error;
-//    }
-//
-//    // Allocate GPU buffers for three vectors (two input, one output)    .
-//    cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int));
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMalloc failed!");
-//        goto Error;
-//    }
-//
-//    cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int));
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMalloc failed!");
-//        goto Error;
-//    }
-//
-//    cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int));
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMalloc failed!");
-//        goto Error;
-//    }
-//
-//    // Copy input vectors from host memory to GPU buffers.
-//    cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMemcpy failed!");
-//        goto Error;
-//    }
-//
-//    cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice);
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMemcpy failed!");
-//        goto Error;
-//    }
-//
-//    // Launch a kernel on the GPU with one thread for each element.
-//    addKernel << <1, size >> > (dev_c, dev_a, dev_b);
-//
-//    // Check for any errors launching the kernel
-//    cudaStatus = cudaGetLastError();
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-//        goto Error;
-//    }
-//
-//    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-//    // any errors encountered during the launch.
-//    cudaStatus = cudaDeviceSynchronize();
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-//        goto Error;
-//    }
-//
-//    // Copy output vector from GPU buffer to host memory.
-//    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
-//    if (cudaStatus != cudaSuccess) {
-//        fprintf(stderr, "cudaMemcpy failed!");
-//        goto Error;
-//    }
-//
-//Error:
-//    cudaFree(dev_c);
-//    cudaFree(dev_a);
-//    cudaFree(dev_b);
-//
-//    return cudaStatus;
-//}
-//
-//
-//
-//const int arraySize = 5;
-//const int a[arraySize] = { 1, 2, 3, 4, 5 };
-//const int b[arraySize] = { 10, 20, 30, 40, 50 };
-//int c[arraySize] = { 0 };
-//
-//
-//
-//printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-//    c[0], c[1], c[2], c[3], c[4]);
-//
-//// cudaDeviceReset must be called before exiting in order for profiling and
-//// tracing tools such as Nsight and Visual Profiler to show complete traces.
-//cudaStatus = cudaDeviceReset();
-//if (cudaStatus != cudaSuccess) {
-//    fprintf(stderr, "cudaDeviceReset failed!");
-//    return 1;
-//}
-
-
- //  while (Figure.get(c)) {
-    //getline(Figure, filename);
-    //for(int i = 0 ; i < filename.size(); i++){
-    //    //Figure.get(c,1024);
-      //  cout << c ;
-    //    cout << filename[i];
-    //    //cout << i << ":" << c << endl;
-    //    //break;
-    //}
-
-    /*while (getline(Figure, fileline)) {
-
-        cout << fileline << '\t' << "The length is: "<< fileline.length() << endl;
-
+    //Allocate GPU monochrome matrix pointer 
+    cudaStatus = cudaMalloc((void**)&dev_mono, size_monochrome * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {                //if failed, prompt error message and return
+        fprintf(stderr, "cudaMalloc monochrome failed!");
+        exit(1);
     }
 
-    Figure.close();*/
+    //Allocate GPU Gaussian kernel pointer 
+    cudaStatus = cudaMalloc((void**)&dev_kernel, size_kernel * sizeof(float));
+    if (cudaStatus != cudaSuccess) {                //if failed, prompt error message and return
+        fprintf(stderr, "cudaMalloc kernel failed!");
+        exit(1);
+    }
+
+    //Allocate GPU X-filtered image matrix pointer 
+    cudaStatus = cudaMalloc((void**)&dev_fil1, size_fil1 * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {                //if failed, prompt error message and return
+        fprintf(stderr, "cudaMalloc dev_fil failed!");
+        exit(1);
+    }
+    //Allocate GPU Y-filtered image matrix pointer 
+    cudaStatus = cudaMalloc((void**)&dev_fil2, size_fil2 * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {                //if failed, prompt error message and return
+        fprintf(stderr, "cudaMalloc failed!");
+        exit(1);
+    }
+
+    //Copy monochrome matrix to GPU device
+    cudaStatus = cudaMemcpy(dev_mono, monochrome, size_monochrome * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy monochrome failed!");
+        exit(1);
+    }
+
+    //Copy Gaussian kernel to GPU device
+    cudaStatus = cudaMemcpy(dev_kernel, k, size_kernel * sizeof(float), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy kernel failed!");
+        exit(1);
+    }
+
+    
+    int BlkNum_fil1 = size_fil1 / 1024 + 1;                 //Calculate block number for x-filtering, using 1024(maximum) threads per block
+    int BlkNum_fil2 = size_fil2 / 1024 + 1;                 //Calculate block number for y-filtering, using 1024(maximum) threads per block
+
+    Conv_x <<< BlkNum_fil1, 1024 >>> (dev_mono, dev_kernel, dev_fil1, length, width, size_kernel);      //Run x-filtering kernel first
+    Conv_y <<< BlkNum_fil2, 1024 >>> (dev_fil1, dev_kernel, dev_fil2, length, width, size_kernel);      //Run y-filtering kernel afterwards
+
+    // Check for any errors launching the kernel
+    cudaStatus = cudaGetLastError();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+        exit(1);
+    }
+
+    // cudaDeviceSynchronize waits for the kernel to finish, and returns
+    // any errors encountered during the launch.
+    cudaStatus = cudaDeviceSynchronize();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+        exit(1);
+    }
+
+    //Copy x-filtering results back to CPU
+    cudaStatus = cudaMemcpy(monochrome_fil1, dev_fil1, size_fil1 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy failed!");
+        exit(1);
+    }
+
+    //Copy y-filtering results back to CPU
+    cudaStatus = cudaMemcpy(monochrome_fil2, dev_fil2, size_fil2 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy failed!");
+        exit(1);
+    }
+
+
+    return monochrome_fil2;
+
+
+}
+
+
