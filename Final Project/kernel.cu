@@ -1,10 +1,46 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-
+#include "mat.h"
+#include "matrix.h"
+#include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
+#include <vector>
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+
+__host__ void matread(const char* file, double* pr)
+{
+    // open MAT-file
+    MATFile* pmat = matOpen(file, "r");
+    std::vector<double> v;
+    if (pmat == NULL) return;
+
+    // extract the specified variable
+    mxArray* arr = matGetVariable(pmat, "xAxis");
+    if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
+        // copy data
+        mwSize num = mxGetNumberOfElements(arr);
+        mxDouble *pr = mxGetPr(arr);
+        
+        for (int i = 0;i < num;i++) {
+            std::cout << *(pr+i) << " ";
+        }
+        //if (pr != NULL) {
+        //    v.reserve(num); //is faster than resize :-)
+        //    v.assign(pr, pr + num);
+        //}
+    }
+
+    // cleanup
+    mxDestroyArray(arr);
+    matClose(pmat);
+}
+
+
+
+
 
 __global__ void addKernel(int *c, const int *a, const int *b)
 {
@@ -12,30 +48,12 @@ __global__ void addKernel(int *c, const int *a, const int *b)
     c[i] = a[i] + b[i];
 }
 
-int main()
+__host__ int main()
 {
-    const int arraySize = 5;
-    const int a[arraySize] = { 1, 2, 3, 4, 5 };
-    const int b[arraySize] = { 10, 20, 30, 40, 50 };
-    int c[arraySize] = { 0 };
+    const char* file = "G:\\Ji Chen's Lab\\Chen's Lab\\ActiveMRIHeating\\Bioheat Equation\\Material_Map.mat";
+    double* v = NULL;
+    matread(file, v);
 
-    // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addWithCuda failed!");
-        return 1;
-    }
-
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-        c[0], c[1], c[2], c[3], c[4]);
-
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
-    }
 
     return 0;
 }
