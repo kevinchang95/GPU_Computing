@@ -1,0 +1,1 @@
+04/26:Basic .mat file read success. For material map (uint16), unsigned short type is needed to copy the data.

@@ -10,7 +10,7 @@
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
-__host__ void matread(const char* file, double* v, int* arraySize)
+__host__ void matread(const char* file, unsigned short* v, int* arraySize)
 {
     // open MAT-file
     MATFile* pmat = matOpen(file, "r");
@@ -23,15 +23,25 @@ __host__ void matread(const char* file, double* v, int* arraySize)
     //if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
         // copy data
         mwSize num = mxGetNumberOfElements(arr);
-        *arraySize = num;
-        double *pr = mxGetPr(arr);
+        const mwSize *dim = mxGetDimensions(arr);
         
-      /*  for (int i = 0;i < num;i++) {
-            std::cout << *(pr+i) << " ";
-        }*/
+        //std::cout<< "Dimension is : " << *dim << *(dim+1) << *(dim+2);
+        *arraySize = num;
+        //double *pr = mxGetPr(arr);
+        //double* pr = (double*)mxGetData(arr);
+        mxUint16* pr = mxGetUint16s(arr);
+        //int* pr_int = (int*)pr;
+        for (int i = 0 ;i < num;i++) {
+            if (*(pr + i) > 0) {
+                std::cout << "Index: " << i << std::endl;
+                std::cout << "Value: " << *(pr + i) << std::endl;
+                break;
+            }
+            //std::cout << *(pr+i+79917) << " ";
+        }
 
-        double* v = (double *)malloc(num * sizeof(double));
-        memcpy(v, pr, sizeof(pr));
+        //double* v = (double *)malloc(num * sizeof(double));
+        memcpy(v, pr+79917, 200*sizeof(unsigned short));
         //if (pr != NULL) {
         //    v.reserve(num); //is faster than resize :-)
         //    std::cout << "max size is: " << int(v.capacity()) << std :: endl;
@@ -57,15 +67,15 @@ __global__ void addKernel(int *c, const int *a, const int *b)
 __host__ int main()
 {
     const char* file = "G:\\Ji Chen's Lab\\Chen's Lab\\ActiveMRIHeating\\Bioheat Equation\\Material_Map.mat";
-    double* v = NULL;
+    unsigned short* v =  (unsigned short*)malloc(sizeof(unsigned short));
     //std::vector<double> v;
     int arraySize;
 
     matread(file, v, &arraySize);
 
     for (int i = 0;i < 200;i++) {
-        std:: cout << "printing read results" << std:: endl;
-        std:: cout << int(v[i]) << " ";
+        std:: cout << "printing read results: " ;
+        std:: cout << *(v+i) << " "<< std:: endl;
         
     }
 
