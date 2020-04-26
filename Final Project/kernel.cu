@@ -10,25 +10,31 @@
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
-__host__ void matread(const char* file, double* pr)
+__host__ void matread(const char* file, double* v, int* arraySize)
 {
     // open MAT-file
     MATFile* pmat = matOpen(file, "r");
-    std::vector<double> v;
+    //std::vector<double> v;
     if (pmat == NULL) return;
 
     // extract the specified variable
-    mxArray* arr = matGetVariable(pmat, "xAxis");
-    if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
+    mxArray* arr = matGetVariable(pmat, "Material_Map");
+    if (arr != NULL  && !mxIsEmpty(arr)) {
+    //if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
         // copy data
         mwSize num = mxGetNumberOfElements(arr);
-        mxDouble *pr = mxGetPr(arr);
+        *arraySize = num;
+        double *pr = mxGetPr(arr);
         
-        for (int i = 0;i < num;i++) {
+      /*  for (int i = 0;i < num;i++) {
             std::cout << *(pr+i) << " ";
-        }
+        }*/
+
+        double* v = (double *)malloc(num * sizeof(double));
+        memcpy(v, pr, sizeof(pr));
         //if (pr != NULL) {
         //    v.reserve(num); //is faster than resize :-)
+        //    std::cout << "max size is: " << int(v.capacity()) << std :: endl;
         //    v.assign(pr, pr + num);
         //}
     }
@@ -52,8 +58,16 @@ __host__ int main()
 {
     const char* file = "G:\\Ji Chen's Lab\\Chen's Lab\\ActiveMRIHeating\\Bioheat Equation\\Material_Map.mat";
     double* v = NULL;
-    matread(file, v);
+    //std::vector<double> v;
+    int arraySize;
 
+    matread(file, v, &arraySize);
+
+    for (int i = 0;i < 200;i++) {
+        std:: cout << "printing read results" << std:: endl;
+        std:: cout << int(v[i]) << " ";
+        
+    }
 
     return 0;
 }
