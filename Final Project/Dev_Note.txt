@@ -1,1 +1,6 @@
-04/26:Basic .mat file read success. For material map (uint16), unsigned short type is needed to copy the data.
+04/25:
+	For running matlab API, mat.h and matrix.h folder should be included which is in MATLAB/extern/include.
+	Also, in Properties/Linker/Input, libmx.lib and libmat.lib should be added as dependencies since those are defined in headers.
+	Which means, all the matlab dll should be copied into project folder for safety considerations.
+04/26:
+	Basic .mat file read success. For material map (uint16), unsigned short type is needed to copy the data.
